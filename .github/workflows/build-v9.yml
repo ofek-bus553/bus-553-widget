@@ -15,7 +15,7 @@ jobs:
           KS_PASS: ${{ secrets.BUS553_KEYSTORE_PASSWORD }}
         run: |
           set -e
-          curl -fsSL -o src.zip "https://raw.githubusercontent.com/ofek-bus553/bus-553-widget/main/1-ofek-bus553-v9-source.zip"
+          curl -fsSL -o src.zip "https://raw.githubusercontent.com/ofek-bus553/bus-553-widget/main/2-ofek-bus553-v9-source.zip"
           unzip -q src.zip
           curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           mkdir -p sdk/cmdline-tools; unzip -q tools.zip -d tmp; mv tmp/cmdline-tools sdk/cmdline-tools/latest
