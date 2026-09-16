@@ -1,0 +1,37 @@
+name: Build bus widget v9
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - name: Build and sign
+        env:
+          KS_B64: ${{ secrets.BUS553_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.BUS553_KEYSTORE_PASSWORD }}
+        run: |
+          set -e
+          curl -fsSL -o src.zip "https://raw.githubusercontent.com/ofek-bus553/bus-553-widget/main/ofek-bus553-v9-source.zip"
+          unzip -q src.zip
+          curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          mkdir -p sdk/cmdline-tools; unzip -q tools.zip -d tmp; mv tmp/cmdline-tools sdk/cmdline-tools/latest
+          yes | sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root="$PWD/sdk" --licenses >/dev/null 2>&1 || true
+          sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root="$PWD/sdk" 'platforms;android-34' 'build-tools;34.0.0' >/dev/null
+          P="$PWD/bus553-v9"; B="$P/build"; BT="$PWD/sdk/build-tools/34.0.0"; mkdir -p "$B/gen" "$B/classes" "$B/dex"
+          "$BT/aapt2" compile --dir "$P/res" -o "$B/res.zip"
+          "$BT/aapt2" link -o "$B/unsigned.apk" -I "$PWD/sdk/platforms/android-34/android.jar" --manifest "$P/AndroidManifest.xml" "$B/res.zip" --java "$B/gen" --min-sdk-version 23 --target-sdk-version 34 --version-code 9 --version-name 9.0
+          javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options -classpath "$PWD/sdk/platforms/android-34/android.jar" -d "$B/classes" $(find "$P/src" "$B/gen" -name '*.java')
+          "$BT/d8" --min-api 23 --lib "$PWD/sdk/platforms/android-34/android.jar" --output "$B/dex" $(find "$B/classes" -name '*.class')
+          (cd "$B/dex" && zip -q -u "$B/unsigned.apk" classes.dex)
+          "$BT/zipalign" -f -p 4 "$B/unsigned.apk" "$B/aligned.apk"
+          echo "$KS_B64" | base64 -d > release.jks
+          "$BT/apksigner" sign --ks release.jks --ks-key-alias bus553 --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" --out ofek-bus-553-widget.apk "$B/aligned.apk"
+          "$BT/apksigner" verify --verbose --print-certs ofek-bus-553-widget.apk | tee apksigner-v9.txt
+          grep -q '1c9397b10baeb76af2fb07ebc2d0535ead87a4ee043a194b8eebfa77721eebb3' apksigner-v9.txt
+          git config user.name github-actions; git config user.email github-actions@github.com
+          git add ofek-bus-553-widget.apk apksigner-v9.txt
+          git commit -m 'Publish signed bus widget v9' && git push
