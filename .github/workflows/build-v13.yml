@@ -15,7 +15,7 @@ jobs:
           KS_PASS: ${{ secrets.BUS553_KEYSTORE_PASSWORD }}
         run: |
           set -e
-          unzip -q 2-ofek-bus553-v13-source.zip
+          unzip -q 1-2-ofek-bus553-v13-source.zip
           curl -fsSL -o tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           mkdir -p sdk/cmdline-tools; unzip -q tools.zip -d tmp; mv tmp/cmdline-tools sdk/cmdline-tools/latest
           yes | sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root="$PWD/sdk" --licenses >/dev/null 2>&1 || true
